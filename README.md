@@ -1,3 +1,5 @@
+![B2S Trader](https://github.com/Rapprise/b2s-trader/blob/master/resources/b2s_images/start_logo.png)
+
 ## B2S Trader - Crypto trading platform
 
 B2S Trader is an indispensable product necessary to successful deals of cryptocurrencies trading.
