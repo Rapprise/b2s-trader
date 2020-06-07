@@ -1,4 +1,4 @@
-![B2S Trader](https://github.com/Rapprise/b2s-trader/blob/master/resources/b2s_images/start_logo.png)
+[![B2S Trader](https://github.com/Rapprise/b2s-trader/blob/master/resources/b2s_images/start_logo.png)](https://rapprise.com/b2s-trader-1-0/)
 
 ## B2S Trader - Crypto trading platform
 
