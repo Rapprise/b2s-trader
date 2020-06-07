@@ -1,0 +1,27 @@
+{
+ "strategy_name" : "Stochastic Oscillator",
+ "description" : "Default Stochastic Oscillator: 14:3:3.",
+ "strategy_type" : 7,
+ "tick_interval" : 4,
+ "custom_strategy" : {
+  "strategy_type" : 7,
+  "strategy_name" : "Stochastic Oscillator",
+  "strategies" : [
+   {
+    "strategy_type" :     6,
+    "stochastic_oscillator_settings" :     {
+     "strategy_name" :      "Stochastic Oscillator",
+     "strategy_type" :      6,
+     "tick_interval" :      4,
+     "stochastic_oscillator_type" :      0,
+     "period_for_classic_line" :      14,
+     "smooth_fast_period" :      3,
+     "smooth_slow_period" :      3,
+     "candles_after_crossings" :      3,
+     "top_level" :      80,
+     "bottom_level" :      20
+    }
+   }
+  ]
+ }
+}

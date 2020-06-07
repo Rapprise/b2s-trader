@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainMenu</class>
+ <widget class="QMainWindow" name="MainMenu">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>704</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralWidget"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>704</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>Configuration</string>
+    </property>
+    <addaction name="actionNew"/>
+    <addaction name="actionLoad"/>
+    <addaction name="actionRemove"/>
+    <addaction name="actionClose"/>
+   </widget>
+   <widget class="QMenu" name="menuStrategies">
+    <property name="title">
+     <string>Strategies</string>
+    </property>
+    <widget class="QMenu" name="menuCustom">
+     <property name="title">
+      <string>Custom</string>
+     </property>
+     <addaction name="actionStrategyAdd"/>
+     <addaction name="actionStrategyLoad"/>
+    </widget>
+    <addaction name="separator"/>
+    <addaction name="menuCustom"/>
+   </widget>
+   <widget class="QMenu" name="menuFeatures">
+    <property name="title">
+     <string>Features</string>
+    </property>
+    <addaction name="actionTelegram"/>
+    <addaction name="actionStop_loss"/>
+    <addaction name="separator"/>
+    <addaction name="actionIntervals"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <widget class="QMenu" name="menuVIew">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <widget class="QMenu" name="menuTheme">
+     <property name="title">
+      <string>Theme</string>
+     </property>
+     <addaction name="actionWhite"/>
+     <addaction name="actionDark"/>
+    </widget>
+    <addaction name="actionViewStrategies"/>
+    <addaction name="actionViewConfigurations"/>
+    <addaction name="actionViewTrading_currencies"/>
+    <addaction name="actionViewAllCurrencies"/>
+    <addaction name="actionAccount_Balance"/>
+    <addaction name="actionViewLogging_console"/>
+    <addaction name="actionViewOrders"/>
+    <addaction name="actionAll_Orders"/>
+    <addaction name="separator"/>
+    <addaction name="menuTheme"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuStrategies"/>
+   <addaction name="menuVIew"/>
+   <addaction name="menuFeatures"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionNew">
+   <property name="text">
+    <string>New</string>
+   </property>
+  </action>
+  <action name="actionLoad">
+   <property name="text">
+    <string>Load</string>
+   </property>
+  </action>
+  <action name="actionRemove">
+   <property name="text">
+    <string>Remove</string>
+   </property>
+  </action>
+  <action name="actionClose">
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </action>
+  <action name="actionTelegram">
+   <property name="text">
+    <string>Telegram</string>
+   </property>
+  </action>
+  <action name="actionStop_loss">
+   <property name="text">
+    <string>Stop loss</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="actionViewStrategies">
+   <property name="text">
+    <string>Strategies</string>
+   </property>
+  </action>
+  <action name="actionViewConfigurations">
+   <property name="text">
+    <string>Trading Configurations</string>
+   </property>
+  </action>
+  <action name="actionViewTrading_currencies">
+   <property name="text">
+    <string>Trading Currencies</string>
+   </property>
+  </action>
+  <action name="actionViewAllCurrencies">
+   <property name="text">
+    <string>All currencies</string>
+   </property>
+  </action>
+  <action name="actionViewLogging_console">
+   <property name="text">
+    <string>Logging</string>
+   </property>
+  </action>
+  <action name="actionViewOrders">
+   <property name="text">
+    <string>Open Orders</string>
+   </property>
+  </action>
+  <action name="actionStrategyAdd">
+   <property name="text">
+    <string>Add</string>
+   </property>
+  </action>
+  <action name="actionStrategyLoad">
+   <property name="text">
+    <string>Load</string>
+   </property>
+  </action>
+  <action name="actionAll_Orders">
+   <property name="text">
+    <string>All Orders</string>
+   </property>
+  </action>
+  <action name="actionWhite">
+   <property name="text">
+    <string>White</string>
+   </property>
+  </action>
+  <action name="actionDark">
+   <property name="text">
+    <string>Dark</string>
+   </property>
+  </action>
+  <action name="actionAccount_Balance">
+   <property name="text">
+    <string>Account Balance</string>
+   </property>
+  </action>
+  <action name="actionIntervals">
+   <property name="text">
+    <string>Intervals</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>

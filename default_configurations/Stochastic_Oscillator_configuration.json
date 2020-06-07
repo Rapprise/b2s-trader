@@ -1,0 +1,32 @@
+{
+ "name" : "Default configuration with Stochastic Oscillator strategy",
+ "description" : "Default configuration with Stochastic Oscillator strategy: 14:3:3.",
+ "strategy_name" : "Stochastic Oscillator",
+ "is_active" : 1,
+ "buy_settings" : {
+  "max_coin_amount" : 1,
+  "max_open_orders" : 4,
+  "max_open_order_time" : 2,
+  "min_order_price" : 0.2,
+  "orders_amount_per_coin" : 4,
+  "percentage_buy_amount" : 10,
+  "open_order_when_any_indicator_is_triggered" : 0
+ },
+ "sell_settings" : {
+  "open_order_time" : 2,
+  "profit_percentage" : 5
+ },
+ "coin_settings" : {
+  "base_currency" : 1,
+  "traded_currencies" : [
+   {
+    "0" :     2
+   }
+  ]
+ },
+ "stock_exchange_settings" : {
+  "stock_exchange_type" : 0,
+  "api_key" : "api_key",
+  "secret_key" : "secret_key"
+ }
+}

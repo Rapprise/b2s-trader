@@ -1,0 +1,23 @@
+{
+ "strategy_name" : "Bollinger Bands",
+ "description" : "Default Bollinger Bands 20:2:2.",
+ "strategy_type" : 7,
+ "tick_interval" : 4,
+ "custom_strategy" : {
+  "strategy_type" : 7,
+  "strategy_name" : "Bollinger Bands",
+  "strategies" : [
+   {
+    "strategy_type" :     0,
+    "bollinger_bands_settings" :     {
+     "strategy_name" :      "Bollinger Bands",
+     "strategy_type" :      0,
+     "tick_interval" :      4,
+     "bb_input_type" :      2,
+     "standard_deviations" :      2,
+     "period" :      20
+    }
+   }
+  ]
+ }
+}

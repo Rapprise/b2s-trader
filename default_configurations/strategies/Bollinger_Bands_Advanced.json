@@ -1,0 +1,25 @@
+{
+ "strategy_name" : "Bollinger Bands Advanced",
+ "description" : "",
+ "strategy_type" : 7,
+ "tick_interval" : 4,
+ "custom_strategy" : {
+  "strategy_type" : 7,
+  "strategy_name" : "Bollinger Bands Advanced",
+  "strategies" : [
+   {
+    "strategy_type" :     1,
+    "bollinger_bands_advanced_settings" :     {
+     "strategy_name" :      "Bollinger Bands Advanced",
+     "strategy_type" :      1,
+     "tick_interval" :      4,
+     "bb_input_type" :      2,
+     "standard_deviations" :      2,
+     "period" :      20,
+     "top_line_percentage" :      100,
+     "bottom_line_percentage" :      100
+    }
+   }
+  ]
+ }
+}

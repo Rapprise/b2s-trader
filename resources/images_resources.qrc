@@ -1,0 +1,50 @@
+ <!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>b2s_images/about_window.png</file>
+    <file>b2s_images/add.png</file>
+    <file>b2s_images/add_custom_strategy.png</file>
+    <file>b2s_images/load_custom_strategy.png</file>
+    <file>b2s_images/B2S_icon.png</file>
+    <file>b2s_images/base_currency.png</file>
+    <file>b2s_images/close_config.png</file>
+    <file>b2s_images/cogwheel.png</file>
+    <file>b2s_images/collapse.png</file>
+    <file>b2s_images/current_config.png</file>
+    <file>b2s_images/custom_strategies.png</file>
+    <file>b2s_images/edit_currect_config.png</file>
+    <file>b2s_images/expand.png</file>
+    <file>b2s_images/logging_off.png</file>
+    <file>b2s_images/logging_on.png</file>
+    <file>b2s_images/logging_clear.png</file>
+    <file>b2s_images/new_config.png</file>
+    <file>b2s_images/open_existing_config.png</file>
+    <file>b2s_images/period.png</file>
+    <file>b2s_images/remove.png</file>
+    <file>b2s_images/remove_config.png</file>
+    <file>b2s_images/run_trading.png</file>
+    <file>b2s_images/set_active_config.png</file>
+    <file>b2s_images/start_logo.png</file>
+    <file>b2s_images/stop_loss.png</file>
+    <file>b2s_images/stop_trading.png</file>
+    <file>b2s_images/strategy_edit.png</file>
+    <file>b2s_images/strategy_remove.png</file>
+    <file>b2s_images/telegram_icon.png</file>
+    <file>b2s_images/tick_interval.png</file>
+    <file>b2s_images/trading_status_active.png</file>
+    <file>b2s_images/trading_status_inactive.png</file>
+    <file>b2s_images/view_of_chart.png</file>
+    <file>b2s_images/zoom_in.png</file>
+    <file>b2s_images/zoom_out.png</file>
+    <file>b2s_images/zoom_reset.png</file>
+    <file>b2s_images/strategy_close.png</file>
+    <file>b2s_images/update_chart.png</file>
+    <file>b2s_images/intervals.png</file>
+    <file>b2s_images/themes.png</file>
+    <file>b2s_images/white_theme.png</file>
+    <file>b2s_images/dark_theme.png</file>
+    <file>b2s_images/about.png</file>
+    <file>b2s_images/market_type.png</file>
+    <file>b2s_images/update_statistic.png</file>
+    <file>b2s_images/stop_updating.png</file>
+</qresource>
+</RCC>

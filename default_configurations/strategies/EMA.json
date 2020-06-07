@@ -1,0 +1,22 @@
+{
+ "strategy_name" : "EMA",
+ "description" : "",
+ "strategy_type" : 7,
+ "tick_interval" : 4,
+ "custom_strategy" : {
+  "strategy_type" : 7,
+  "strategy_name" : "EMA",
+  "strategies" : [
+   {
+    "strategy_type" :     4,
+    "ema_settings" :     {
+     "strategy_name" :      "EMA",
+     "strategy_type" :      4,
+     "tick_interval" :      4,
+     "period" :      14,
+     "candles_after_crossing" :      3
+    }
+   }
+  ]
+ }
+}

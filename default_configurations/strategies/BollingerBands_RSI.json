@@ -1,0 +1,35 @@
+{
+ "strategy_name" : "Bollinger Bands + RSI",
+ "description" : "Default settings for BB and RSI",
+ "strategy_type" : 7,
+ "tick_interval" : 4,
+ "custom_strategy" : {
+  "strategy_type" : 7,
+  "strategy_name" : "Bollinger Bands + RSI",
+  "strategies" : [
+   {
+    "strategy_type" :     0,
+    "bollinger_bands_settings" :     {
+     "strategy_name" :      "Bollinger Bands",
+     "strategy_type" :      0,
+     "tick_interval" :      4,
+     "bb_input_type" :      2,
+     "standard_deviations" :      2,
+     "period" :      20
+    }
+   },
+   {
+    "strategy_type" :     2,
+    "rsi_settings" :     {
+     "strategy_name" :      "RSI",
+     "strategy_type" :      2,
+     "tick_interval" :      4,
+     "period" :      14,
+     "candles_after_crossing" :      3,
+     "top_level" :      80,
+     "bottom_level" :      20
+    }
+   }
+  ]
+ }
+}

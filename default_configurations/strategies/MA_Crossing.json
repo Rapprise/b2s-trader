@@ -1,0 +1,24 @@
+{
+ "strategy_name" : "MA Crossing",
+ "description" : "",
+ "strategy_type" : 7,
+ "tick_interval" : 4,
+ "custom_strategy" : {
+  "strategy_type" : 7,
+  "strategy_name" : "MA Crossing",
+  "strategies" : [
+   {
+    "strategy_type" :     5,
+    "moving_averages_crossings_settings" :     {
+     "strategy_name" :      "MA Crossing",
+     "strategy_type" :      5,
+     "tick_interval" :      4,
+     "moving_average_type" :      0,
+     "smaller_period" :      5,
+     "bigger_period" :      10,
+     "crossing_interval" :      1
+    }
+   }
+  ]
+ }
+}

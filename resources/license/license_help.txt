@@ -1,0 +1,59 @@
+
+				License Help for B2S Trader
+			-----------------------------------
+Contents
+--------
+  The License Help includes the following sections:
+    * Requesting a License
+    * Running B2S Trader using The License Key
+	* License File Location
+    * Contacting Technical Support
+	
+Requesting a License
+--------------------
+  1. If you have not applied for a license yet, first, choose the license type at
+       http://rapprise.com/b2s-trader-1-0/#product-subscription
+
+  Note. Each license type gives access to all features of B2S Trader for
+        corresponding time period: week, month or year.
+  
+  2. Enter the MAC address of your device, since B2S Trader license 
+     is tied to the MAC address of device the product will be used on.
+	 
+  3. Choose a payment method.
+  
+Running B2S Trader using The License Key
+----------------------------------------
+  1. A file containing the activation key will be sent to your email,
+     or you can find it at your account.
+	 
+  2. Enter your activation key to the License box opening when B2S Trader starts.
+  
+  Note. If the license period does not end, and you change your device,
+        write a request to technical support at your account to get the
+		license key tied to the new MAC address.
+
+License File Location
+---------------------
+  Windows
+    <<ProductFolder>>/config/.B2SLicenseb2s
+  
+  Linux
+    /home/username/.B2SLicense/b2s.txt
+	
+  MacOS
+    /Users/username/.B2SLicense/b2s.txt
+
+Contacting Technical Support
+----------------------------
+  If you have any questions, please submit your request to technical support
+  through your account or send it to
+    info@rapprise.com
+	
+  Remember to include the following information:
+    * Your name, e-mail address
+    * Detailed description of the problem
+
+____________________________
+(c) Rapprise
+    All rights reserved.
