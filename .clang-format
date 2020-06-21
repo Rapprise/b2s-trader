@@ -1,0 +1,4 @@
+BasedOnStyle: Google
+Standard: Cpp11
+PointerAlignment: Left
+ColumnLimit: 100

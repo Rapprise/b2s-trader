@@ -118,6 +118,18 @@ void TradeConfigJSONSerializer::serializeSellSettings(Poco::JSON::PrintHandler& 
   printHandler.key("profit_percentage");
   printHandler.value(sellSettings.profitPercentage_);
 
+  printHandler.key("strategy_name");
+  printHandler.value(sellSettings.strategyName_);
+
+  printHandler.key("sell_using_strategy");
+  printHandler.value(sellSettings.sellUsingStrategy_);
+
+  printHandler.key("open_order_when_any_indicator_is_triggered");
+  printHandler.value(sellSettings.openOrderWhenAnyIndicatorIsTriggered_);
+
+  printHandler.key("sell_using_profit");
+  printHandler.value(sellSettings.sellUsingProfit_);
+
   printHandler.endObject();
 }
 
@@ -194,6 +206,19 @@ void TradeConfigJSONSerializer::deserializeSellSettings(Poco::JSON::Object::Ptr 
 
   auto percentageProfit = sellObject->getValue<double>("profit_percentage");
   sellSettings.profitPercentage_ = percentageProfit;
+
+  auto strategy_name = sellObject->getValue<std::string>("strategy_name");
+  sellSettings.strategyName_ = strategy_name;
+
+  auto sell_using_strategy = sellObject->getValue<bool>("sell_using_strategy");
+  sellSettings.sellUsingStrategy_ = sell_using_strategy;
+
+  auto openOrderWhenAnyIndicatorIsTriggered =
+      sellObject->getValue<bool>("open_order_when_any_indicator_is_triggered");
+  sellSettings.openOrderWhenAnyIndicatorIsTriggered_ = openOrderWhenAnyIndicatorIsTriggered;
+
+  auto sell_using_profit = sellObject->getValue<bool>("sell_using_profit");
+  sellSettings.sellUsingProfit_ = sell_using_profit;
 }
 
 void TradeConfigJSONSerializer::deserializeCoinSettings(Poco::JSON::Object::Ptr jsonObject,

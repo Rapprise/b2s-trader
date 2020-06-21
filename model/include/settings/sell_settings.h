@@ -33,6 +33,13 @@ namespace model {
 struct SellSettings {
   double profitPercentage_;
   unsigned int openOrderTime_;
+
+  std::string strategyName_;
+
+  bool sellUsingProfit_{false};
+  bool sellUsingStrategy_{false};
+
+  bool openOrderWhenAnyIndicatorIsTriggered_{false};
 };
 
 }  // namespace model

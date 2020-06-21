@@ -91,6 +91,21 @@ CreateTradeConfigurationDialog::CreateTradeConfigurationDialog(common::AppListen
   stockExchangedChanged(QString());
   checkOkButtonState();
 
+  connect(uiDialog_.checkBox_2, SIGNAL(toggled(bool)), uiDialog_.comboBox_5,
+          SLOT(setEnabled(bool)));
+  connect(uiDialog_.checkBox_2, SIGNAL(toggled(bool)), uiDialog_.checkBox_4,
+          SLOT(setEnabled(bool)));
+
+  connect(uiDialog_.checkBox_3, SIGNAL(toggled(bool)), uiDialog_.lineEdit_7,
+          SLOT(setEnabled(bool)));
+
+  uiDialog_.checkBox_3->setChecked(true);
+  uiDialog_.lineEdit_7->setEnabled(true);
+
+  uiDialog_.checkBox_2->setChecked(false);
+  uiDialog_.comboBox_5->setEnabled(false);
+  uiDialog_.checkBox_4->setEnabled(false);
+
   QIcon baseConfigIcon = QIcon(":/b2s_images/cogwheel.png");
   QPixmap iconCurrencyPixmap = baseConfigIcon.pixmap(QSize(16, 16));
   uiDialog_.label_21->setPixmap(iconCurrencyPixmap);
@@ -187,6 +202,23 @@ void CreateTradeConfigurationDialog::setupDefaultParameters(
   const std::string &profitPercentage = doubleToString(config.getSellSettings().profitPercentage_);
   uiDialog_.lineEdit_7->setText(QString::fromStdString(profitPercentage));
 
+  if (config.getSellSettings().sellUsingProfit_) {
+    uiDialog_.lineEdit_7->setEnabled(true);
+    uiDialog_.checkBox_3->setChecked(config.getSellSettings().sellUsingProfit_);
+    const std::string &profitPercentage =
+        doubleToString(config.getSellSettings().profitPercentage_);
+    uiDialog_.lineEdit_7->setText(QString::fromStdString(profitPercentage));
+  }
+
+  if (config.getSellSettings().sellUsingStrategy_) {
+    uiDialog_.comboBox_5->setEnabled(true);
+    uiDialog_.checkBox_2->setChecked(config.getSellSettings().sellUsingStrategy_);
+    uiDialog_.comboBox_5->setCurrentText(
+        QString::fromStdString(config.getSellSettings().strategyName_));
+    uiDialog_.checkBox_4->setChecked(
+        config.getSellSettings().openOrderWhenAnyIndicatorIsTriggered_);
+  }
+
   const std::string &openOrderTime = std::to_string(config.getSellSettings().openOrderTime_);
   uiDialog_.lineEdit_8->setText(QString::fromStdString(openOrderTime));
 
@@ -223,6 +255,7 @@ void CreateTradeConfigurationDialog::initStrategies() {
   });
 
   uiDialog_.comboBox_3->addItems(items);
+  uiDialog_.comboBox_5->addItems(items);
 }
 
 void CreateTradeConfigurationDialog::initStockExchangeSettings() {
@@ -282,6 +315,18 @@ void CreateTradeConfigurationDialog::closeDialog() {
   buySettings.openOrderWhenAnyIndicatorIsTriggered_ = uiDialog_.checkBox->isChecked();
 
   auto &sellSettings = configuration->takeSellSettings();
+  sellSettings.sellUsingProfit_ = uiDialog_.checkBox_3->isChecked();
+  if (sellSettings.sellUsingProfit_) {
+    const std::string profitPercentage = uiDialog_.lineEdit_7->text().toStdString();
+    sellSettings.profitPercentage_ = std::stod(profitPercentage);
+  }
+
+  sellSettings.sellUsingStrategy_ = uiDialog_.checkBox_2->isChecked();
+  if (sellSettings.sellUsingStrategy_) {
+    sellSettings.strategyName_ = uiDialog_.comboBox_5->currentText().toStdString();
+    sellSettings.openOrderWhenAnyIndicatorIsTriggered_ = uiDialog_.checkBox_4->isChecked();
+  }
+
   const std::string profitPercentage = uiDialog_.lineEdit_7->text().toStdString();
   sellSettings.profitPercentage_ = std::stod(profitPercentage);
 
@@ -339,23 +384,35 @@ void CreateTradeConfigurationDialog::checkOkButtonState() const {
   bool isPositionAmountPerCoinValid = !uiDialog_.lineEdit_5->text().isEmpty();
   bool isPercentageBuyAmountValid = !uiDialog_.lineEdit_6->text().isEmpty();
   bool isMinOrderPriceValid = !uiDialog_.lineEdit_4->text().isEmpty();
-  bool isProfitPercentageValid = !uiDialog_.lineEdit_7->text().isEmpty();
   bool isOpenSellOrderTimeValid = !uiDialog_.lineEdit_8->text().isEmpty();
 
   bool apiKeyEmpty = uiDialog_.lineEdit_9->text().isEmpty();
   bool secretKeyEmpty = uiDialog_.lineEdit_11->text().isEmpty();
   bool tradedCurrenciesEmpty = selectedCoinsList_->isEmpty();
 
+  bool sell_strategy_chosen =
+      uiDialog_.checkBox_3->isEnabled() || uiDialog_.checkBox_2->isEnabled();
+
   bool isButtonOkDisabled =
       isConfigEmpty || isStrategyEmpty || !isOpenOrderTimeValid || !isMaxOpenOrdersValid ||
       !isMaxCoinAmountValid || !isPositionAmountPerCoinValid || !isPercentageBuyAmountValid ||
-      !isMinOrderPriceValid || !isProfitPercentageValid || !isOpenSellOrderTimeValid ||
-      apiKeyEmpty || secretKeyEmpty || tradedCurrenciesEmpty;
+      !isMinOrderPriceValid || !sell_strategy_chosen || !isOpenSellOrderTimeValid || apiKeyEmpty ||
+      secretKeyEmpty || tradedCurrenciesEmpty;
 
   if (isButtonOkDisabled) {
     uiDialog_.buttonBox->button(QDialogButtonBox::StandardButton::Ok)
         ->setDisabled(isButtonOkDisabled);
     return;
+  }
+
+  if (sell_strategy_chosen) {
+    if (uiDialog_.checkBox_3->isEnabled()) {
+      bool is_profit_percentage_valid = uiDialog_.lineEdit_7->text().isEmpty();
+      if (!is_profit_percentage_valid) {
+        uiDialog_.buttonBox->button(QDialogButtonBox::StandardButton::Ok)->setDisabled(true);
+        return;
+      }
+    }
   }
 
   const std::string maxCoinAmount = uiDialog_.lineEdit_3->text().toStdString();

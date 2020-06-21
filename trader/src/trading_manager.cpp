@@ -33,7 +33,8 @@
 #include "common/loggers/file_logger.h"
 #include "features/include/stop_loss_announcer.h"
 #include "features/include/telegram_announcer.h"
-#include "include/trading_processor.h"
+#include "include/trading_buying_strategy_processor.h"
+#include "include/trading_selling_strategy_processor.h"
 #include "model/include/orders/orders_profit.h"
 #include "stocks_exchange/include/query_processor.h"
 #include "stocks_exchange/include/stock_exchange_utils.h"
@@ -283,10 +284,10 @@ void TradingManager::uploadBuyingOrders() {
     messageSender_.setBuyingPrefix();
 
     auto &currentTradeConfiguration = tradeConfigsHolder_.takeCurrentTradeConfiguration();
-    TradingProcessor processor(queryProcessor_, strategyFacade_, databaseProvider_, appListener_,
-                               strategiesSettingsHolder_, tradeOrdersHolder_,
-                               tradeSignaledStrategyMarketHolder_, currentTradeConfiguration,
-                               messageSender_, currencyLotsHolder_, *this);
+    TradingBuyingStrategyProcessor processor(
+        queryProcessor_, strategyFacade_, databaseProvider_, appListener_,
+        strategiesSettingsHolder_, tradeOrdersHolder_, tradeSignaledStrategyMarketHolder_,
+        currentTradeConfiguration, messageSender_, currencyLotsHolder_, *this);
     processor.run();
   } catch (std::exception &exception) {
     messageSender_.sendMessage(exception.what());
@@ -429,62 +430,20 @@ void TradingManager::uploadSellOrders() {
 
     std::lock_guard<std::mutex> lock(locker_);
 
-    for (int index = 0; index < coinSettings.tradedCurrencies_.size(); ++index) {
-      auto tradedCurrency = coinSettings.tradedCurrencies_.at(index);
-      if (!tradeOrdersHolder_.containOrdersProfit(tradedCurrency)) continue;
+    TradingSellStrategyProcessor processor(
+        queryProcessor_, strategyFacade_, databaseProvider_, appListener_,
+        strategiesSettingsHolder_, tradeOrdersHolder_, tradeConfigsHolder_,
+        tradeSignaledStrategyMarketHolder_, currentTradeConfiguration, messageSender_,
+        currencyLotsHolder_, *this);
 
-      auto &ordersProfit = tradeOrdersHolder_.takeOrdersProfit(tradedCurrency);
-
-      std::set<common::MarketOrder> sellOrders;
-      ordersProfit.forEachOrder(
-          [&](const common::MarketOrder &order) { sellOrders.insert(order); });
-
-      for (auto order : sellOrders) {
-        double profitDelta = order.price_ * (sellSettings.profitPercentage_ / 100);
-        double boughtPrice = order.price_ + profitDelta;
-        auto currentTick = query->getCurrencyTick(order.fromCurrency_, order.toCurrency_);
-        if (currentTick.bid_ >= boughtPrice) {
-          double quantity = calculateOrderQuantity(order, ordersProfit);
-          if (quantity == 0) {
-            resetOrderProfit(ordersProfit);
-            return;
-          }
-
-          quantity = calculateLotSize(tradedCurrency, quantity);
-          if (quantity == 0) {
-            continue;
-          }
-
-          common::MarketOrder currentOrder = query->sellOrder(
-              coinSettings.baseCurrency_, tradedCurrency, quantity, currentTick.bid_);
-
-          const std::string message = "Opened sell order : [ " + currentOrder.toString() + " ]";
-          messageSender_.sendMessage(message);
-
-          auto &telegramAnnouncer = features::telegram_announcer::TelegramAnnouncer::instance();
-          if (telegramAnnouncer.isLoggingEnabled()) {
-            telegramAnnouncer.sendMessage(message);
-          }
-
-          databaseProvider_.insertMarketOrder(currentOrder);
-          currentOrder.databaseId_ = databaseProvider_.getLastInsertRowId();
-
-          auto currencyPair = common::Currency::toString(order.fromCurrency_) +
-                              common::Currency::toString(order.toCurrency_);
-
-          tradeOrdersHolder_.addSellOrder(currentOrder);
-          orderMatching.addOrderMatching(currentOrder, order);
-
-          databaseProvider_.insertOrderMatching(
-              stockExchangeSettings.stockExchangeType_, currencyPair, common::OrderType::SELL,
-              common::OrderType::BUY, currentOrder.databaseId_, order.databaseId_);
-
-          ordersProfit.removeOrder(order);
-          databaseProvider_.removeOrderProfit(stockExchangeSettings.stockExchangeType_,
-                                              order.toCurrency_, order.databaseId_);
-        }
-      }
+    if (sellSettings.sellUsingProfit_) {
+      processor.runTakeProfitProcessor();
     }
+
+    if (sellSettings.sellUsingStrategy_) {
+      processor.runStrategyProcessor();
+    }
+
   } catch (std::exception &exception) {
     messageSender_.sendMessage(exception.what());
   }
@@ -494,72 +453,16 @@ void TradingManager::runStopLoss() {
   try {
     messageSender_.setSellingPrefix();
     auto &currentTradeConfiguration = tradeConfigsHolder_.takeCurrentTradeConfiguration();
-    auto &stockExchangeSettings = currentTradeConfiguration.getStockExchangeSettings();
-    auto &sellSettings = currentTradeConfiguration.getSellSettings();
-    auto &coinSettings = currentTradeConfiguration.getCoinSettings();
-    auto query = queryProcessor_.getQuery(stockExchangeSettings.stockExchangeType_);
-    auto &orderMatching = tradeOrdersHolder_.takeOrderMatching();
-
     std::lock_guard<std::mutex> lock(locker_);
 
-    for (int index = 0; index < coinSettings.tradedCurrencies_.size(); ++index) {
-      auto tradedCurrency = coinSettings.tradedCurrencies_[index];
-      if (!tradeOrdersHolder_.containOrdersProfit(tradedCurrency)) continue;
+    TradingSellStrategyProcessor processor(
+        queryProcessor_, strategyFacade_, databaseProvider_, appListener_,
+        strategiesSettingsHolder_, tradeOrdersHolder_, tradeConfigsHolder_,
+        tradeSignaledStrategyMarketHolder_, currentTradeConfiguration, messageSender_,
+        currencyLotsHolder_, *this);
 
-      auto &ordersProfit = tradeOrdersHolder_.takeOrdersProfit(tradedCurrency);
+    processor.runStopLossProcessor();
 
-      std::set<common::MarketOrder> stopLossOrders;
-      ordersProfit.forEachOrder(
-          [&](const common::MarketOrder &order) { stopLossOrders.insert(order); });
-
-      for (auto order : stopLossOrders) {
-        auto currentTick = query->getCurrencyTick(order.fromCurrency_, order.toCurrency_);
-        auto &stopLossAnnounces = features::stop_loss_announcer::StopLossAnnouncer::instance();
-        double stopLossPercentage = stopLossAnnounces.getValue() / 100;
-        double stopLossEdge = order.price_ * (1 - stopLossPercentage);
-        if (currentTick.ask_ <= stopLossEdge) {
-          double quantity = calculateOrderQuantity(order, ordersProfit);
-          if (quantity == 0) {
-            resetOrderProfit(ordersProfit);
-            return;
-          }
-
-          quantity = calculateLotSize(tradedCurrency, quantity);
-          if (quantity == 0) {
-            continue;
-          }
-
-          common::MarketOrder currentOrder = query->sellOrder(
-              coinSettings.baseCurrency_, tradedCurrency, quantity, currentTick.bid_);
-
-          const std::string message =
-              "STOP LOSS SIGNAL: Open order : [ " + currentOrder.toString() + " ]";
-          messageSender_.sendMessage(message);
-
-          auto &telegramAnnouncer = features::telegram_announcer::TelegramAnnouncer::instance();
-          if (telegramAnnouncer.isLoggingEnabled()) {
-            telegramAnnouncer.sendMessage(message);
-          }
-
-          databaseProvider_.insertMarketOrder(currentOrder);
-          currentOrder.databaseId_ = databaseProvider_.getLastInsertRowId();
-
-          auto currencyPair = common::Currency::toString(order.fromCurrency_) +
-                              common::Currency::toString(order.toCurrency_);
-
-          tradeOrdersHolder_.addSellOrder(currentOrder);
-          orderMatching.addOrderMatching(currentOrder, order);
-
-          databaseProvider_.insertOrderMatching(
-              stockExchangeSettings.stockExchangeType_, currencyPair, common::OrderType::SELL,
-              common::OrderType::BUY, currentOrder.databaseId_, order.databaseId_);
-
-          ordersProfit.removeOrder(order);
-          databaseProvider_.removeOrderProfit(stockExchangeSettings.stockExchangeType_,
-                                              order.toCurrency_, order.databaseId_);
-        }
-      }
-    }
   } catch (std::exception &exception) {
     messageSender_.sendMessage(exception.what());
   }
@@ -747,76 +650,6 @@ void TradingManager::resetData() {
     databaseProvider_.removeMarketData(stockExchangeSettings.stockExchangeType_,
                                        coinSettings.baseCurrency_, tradedCurrency);
   }
-}
-
-void TradingManager::resetOrderProfit(model::OrdersProfit &orderProfit) {
-  auto &currentTradeConfiguration = tradeConfigsHolder_.takeCurrentTradeConfiguration();
-  auto &stockExchangeSettings = currentTradeConfiguration.getStockExchangeSettings();
-  common::Currency::Enum tradedCurrency = orderProfit.getCurrency();
-
-  databaseProvider_.removeCurrencyProfit(tradedCurrency, stockExchangeSettings.stockExchangeType_);
-  orderProfit.forEachOrder([&](const common::MarketOrder &marketOrder) {
-    databaseProvider_.removeMarketOrder(marketOrder);
-  });
-
-  orderProfit.clear();
-}
-
-double TradingManager::calculateLotSize(common::Currency::Enum tradedCurrency,
-                                        double quantity) const {
-  auto &currentTradeConfiguration = tradeConfigsHolder_.takeCurrentTradeConfiguration();
-  auto &stockExchangeSettings = currentTradeConfiguration.getStockExchangeSettings();
-  auto &coinSettings = currentTradeConfiguration.getCoinSettings();
-
-  if (!currencyLotsHolder_.empty()) {
-    std::string marketPair = stock_exchange_utils::getMarketPair(
-        stockExchangeSettings.stockExchangeType_, coinSettings.baseCurrency_, tradedCurrency);
-
-    auto lotSize = currencyLotsHolder_.getLot(marketPair);
-    if (quantity < lotSize.minQty_) {
-      const std::string message = "Coins quantity is smaller than allowed minimum for currency " +
-                                  common::Currency::toString(tradedCurrency) +
-                                  "Order cannot be opened.";
-      messageSender_.sendMessage(message);
-      return 0;
-    }
-    double reminder = fmod(quantity, lotSize.stepSize_);
-    if (reminder > 0) {
-      quantity = quantity - reminder;
-    }
-  }
-
-  return quantity;
-}
-
-double TradingManager::calculateOrderQuantity(const common::MarketOrder &order,
-                                              model::OrdersProfit &orderProfit) {
-  auto &currentTradeConfiguration = tradeConfigsHolder_.takeCurrentTradeConfiguration();
-  auto &stockExchangeSettings = currentTradeConfiguration.getStockExchangeSettings();
-  auto &coinSettings = currentTradeConfiguration.getCoinSettings();
-  auto query = queryProcessor_.getQuery(stockExchangeSettings.stockExchangeType_);
-  auto tradedCurrency = orderProfit.getCurrency();
-  double balance = query->getBalance(tradedCurrency);
-
-  if (balance >= order.quantity_) {
-    return order.quantity_;
-  }
-
-  if (orderProfit.getOrdersCount() > 1) {
-    std::string accountBalanceStr = common::MarketOrder::convertCoinToString(balance);
-    std::string orderProfitBalanceStr =
-        common::MarketOrder::convertCoinToString(orderProfit.getBalance());
-    messageSender_.sendMessage("You have more that 1 closed buying orders. Account Balance '" +
-                               accountBalanceStr + "' is lower than profit '" +
-                               orderProfitBalanceStr +
-                               "' from buying orders."
-                               "Trading state for currency " +
-                               common::Currency::toString(tradedCurrency) + " will be reset.");
-
-    return 0;
-  }
-
-  return balance;
 }
 
 }  // namespace trader

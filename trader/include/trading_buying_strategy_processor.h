@@ -24,8 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AUTO_TRADER_TRADING_PROCESSOR_H
-#define AUTO_TRADER_TRADING_PROCESSOR_H
+#ifndef AUTO_TRADER_TRADING_BUYING_STRATEGY_PROCESSOR_H
+#define AUTO_TRADER_TRADING_BUYING_STRATEGY_PROCESSOR_H
 
 #include <memory>
 #include <set>
@@ -55,26 +55,26 @@ struct RsiSettings;
 struct EmaSettings;
 struct SmaSettings;
 struct MovingAveragesCrossingSettings;
-struct PingPongSettings;
 struct CustomStrategySettings;
 }  // namespace model
 
 namespace trader {
 
-class TradingProcessor : private model::StrategySettingsVisitor {
+class TradingBuyingStrategyProcessor : private model::StrategySettingsVisitor {
  public:
-  TradingProcessor(stock_exchange::QueryProcessor &queryProcessor,
-                   strategies::StrategyFacade &strategiesLibrary,
-                   database::Database &databaseProvider, common::AppListener &appListener,
-                   const model::StrategiesSettingsHolder &strategiesSettingsHolder,
-                   model::TradeOrdersHolder &tradeOrdersHolder,
-                   model::TradeSignaledStrategyMarketHolder &tradeSignaledStrategyMarketHolder,
-                   const model::TradeConfiguration &tradeConfiguration,
-                   TradingMessageSender &messageSender,
-                   const stock_exchange::CurrencyLotsHolder &lotsHolder,
-                   const TradingManager &tradingManager);
+  TradingBuyingStrategyProcessor(
+      stock_exchange::QueryProcessor &queryProcessor, strategies::StrategyFacade &strategiesLibrary,
+      database::Database &databaseProvider, common::AppListener &appListener,
+      const model::StrategiesSettingsHolder &strategiesSettingsHolder,
+      model::TradeOrdersHolder &tradeOrdersHolder,
+      model::TradeSignaledStrategyMarketHolder &tradeSignaledStrategyMarketHolder,
+      const model::TradeConfiguration &tradeConfiguration, TradingMessageSender &messageSender,
+      const stock_exchange::CurrencyLotsHolder &lotsHolder, const TradingManager &tradingManager);
 
   void run();
+
+  common::MarketOrder openOrder(common::Currency::Enum fromCurrency,
+                                common::Currency::Enum toCurrency, double quantity, double price);
 
  private:
   void visit(const model::BollingerBandsSettings &bandsSettings) final;
@@ -89,8 +89,6 @@ class TradingProcessor : private model::StrategySettingsVisitor {
  private:
   void updateCrossingPoint(const model::StrategySettings &strategySettings,
                            double lastCrossingPoint);
-  bool isNeedToOpenBuyOrder() const;
-
   common::MarketHistoryPtr getMarketHistory(common::TickInterval::Enum interval) const;
 
  private:
@@ -117,4 +115,4 @@ class TradingProcessor : private model::StrategySettingsVisitor {
 }  // namespace trader
 }  // namespace auto_trader
 
-#endif  // AUTO_TRADER_TRADING_PROCESSOR_H
+#endif  // AUTO_TRADER_TRADING_BUYING_STRATEGY_PROCESSOR_H

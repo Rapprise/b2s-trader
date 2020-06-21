@@ -24,7 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "include/trading_processor.h"
+#include "include/trading_buying_strategy_processor.h"
 
 #include "features/include/telegram_announcer.h"
 #include "model/include/settings/strategies_settings/bollinger_bands_advanced_settings.h"
@@ -41,16 +41,14 @@
 namespace auto_trader {
 namespace trader {
 
-TradingProcessor::TradingProcessor(
+TradingBuyingStrategyProcessor::TradingBuyingStrategyProcessor(
     stock_exchange::QueryProcessor &queryProcessor, strategies::StrategyFacade &strategiesLibrary,
     database::Database &databaseProvider, common::AppListener &appListener,
     const model::StrategiesSettingsHolder &strategiesSettingsHolder,
     model::TradeOrdersHolder &tradeOrdersHolder,
     model::TradeSignaledStrategyMarketHolder &tradeSignaledStrategyMarketHolder,
     const model::TradeConfiguration &tradeConfiguration, TradingMessageSender &messageSender,
-    const stock_exchange::CurrencyLotsHolder &lotsHolder, const TradingManager &tradingManager
-
-    )
+    const stock_exchange::CurrencyLotsHolder &lotsHolder, const TradingManager &tradingManager)
     : queryProcessor_(queryProcessor),
       strategiesLibrary_(strategiesLibrary),
       databaseProvider_(databaseProvider),
@@ -65,7 +63,7 @@ TradingProcessor::TradingProcessor(
       currentTradedCurrency(common::Currency::UNKNOWN),
       processingResult(true) {}
 
-void TradingProcessor::run() {
+void TradingBuyingStrategyProcessor::run() {
   const auto &strategySettings =
       strategiesSettingsHolder_.getCustomStrategy(tradeConfiguration_.getStrategyName());
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
@@ -90,82 +88,15 @@ void TradingProcessor::run() {
         return;
       }
 
-      if (!isNeedToOpenBuyOrder()) {
-        continue;
-      }
-
-      auto coinInTradingCount = tradeOrdersHolder_.getCoinInTradingCount();
-      auto baseAmountPerEachOrder = buySettings.getBaseCurrencyAmountPerEachOrder();
-      double potentialCoinInTradingAmount = coinInTradingCount + baseAmountPerEachOrder;
-      const std::string marketStr = common::Currency::toString(coinSettings.baseCurrency_) + "-" +
-                                    common::Currency::toString(currentTradedCurrency);
-
-      if (potentialCoinInTradingAmount > buySettings.maxCoinAmount_) {
-        double potentialCoinInTradingWithMinOrderPrice =
-            coinInTradingCount + buySettings.minOrderPrice_;
-        if (potentialCoinInTradingWithMinOrderPrice > buySettings.maxCoinAmount_) {
-          messageSender_.sendMessage(
-              "The maximum coin amount in trading is reached. Buy order cannot be opened for "
-              "market " +
-              marketStr);
-          continue;
-        } else {
-          messageSender_.sendMessage(
-              "The total amount of orders exceeds \"Funded amount\" when establishing a new order. "
-              "The \"Min order price\" will be used for order forming for market " +
-              marketStr);
-          baseAmountPerEachOrder = buySettings.minOrderPrice_;
-        }
-      }
+      if (!processingResult) continue;
 
       auto currentTick = query->getCurrencyTick(coinSettings.baseCurrency_, currentTradedCurrency);
-      auto balance = query->getBalance(coinSettings.baseCurrency_);
-      if (balance < baseAmountPerEachOrder) {
-        if (balance > buySettings.minOrderPrice_) {
-          messageSender_.sendMessage(
-              "The account balance is smaller than defined order price. The minimum order price "
-              "will be used for market " +
-              marketStr);
-          baseAmountPerEachOrder = buySettings.minOrderPrice_;
-        } else {
-          messageSender_.sendMessage("There is not enough money to open buy order for market " +
-                                     marketStr);
-          continue;
-        }
-      }
 
+      auto baseAmountPerEachOrder = buySettings.getBaseCurrencyAmountPerEachOrder();
       double quantity = baseAmountPerEachOrder / currentTick.ask_;
-      if (quantity <= 0) {
-        const std::string message = "Coins quantity is too small. Order cannot be opened.";
-        messageSender_.sendMessage(message);
-        continue;
-      }
 
-      if (!lotsHolder_.empty()) {
-        std::string marketPair =
-            stock_exchange_utils::getMarketPair(stockExchangeSettings.stockExchangeType_,
-                                                coinSettings.baseCurrency_, currentTradedCurrency);
+      openOrder(coinSettings.baseCurrency_, currentTradedCurrency, quantity, currentTick.ask_);
 
-        auto lotSize = lotsHolder_.getLot(marketPair);
-        if (quantity < lotSize.minQty_) {
-          const std::string message =
-              "Coins quantity is smaller that allowed minimum for current market. Buy order cannot "
-              "be opened.";
-          messageSender_.sendMessage(message);
-          continue;
-        }
-        double reminder = fmod(quantity, lotSize.stepSize_);
-        if (reminder > 0) {
-          quantity = quantity - reminder;
-        }
-      }
-      auto currentOrder = query->buyOrder(coinSettings.baseCurrency_, currentTradedCurrency,
-                                          quantity, currentTick.ask_);
-      const std::string message = "Opened buy order : " + currentOrder.toString();
-      messageSender_.sendMessage(message);
-      databaseProvider_.insertMarketOrder(currentOrder);
-      currentOrder.databaseId_ = databaseProvider_.getLastInsertRowId();
-      tradeOrdersHolder_.addBuyOrder(currentOrder);
       for (auto strategyMarket : strategyMarkets_) {
         if (tradeSignaledStrategyMarketHolder_.containMarket(
                 coinSettings.baseCurrency_, currentTradedCurrency, strategyMarket.first)) {
@@ -192,7 +123,7 @@ void TradingProcessor::run() {
   }
 }
 
-void TradingProcessor::visit(const model::BollingerBandsSettings &bandsSettings) {
+void TradingBuyingStrategyProcessor::visit(const model::BollingerBandsSettings &bandsSettings) {
   const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
   bool anyIndicatorTriggered =
@@ -231,7 +162,7 @@ void TradingProcessor::visit(const model::BollingerBandsSettings &bandsSettings)
   strategyCrossingPoints_[&bandsSettings] = currentStrategy->getLastBuyCrossingPoint();
 }
 
-void TradingProcessor::visit(
+void TradingBuyingStrategyProcessor::visit(
     const model::BollingerBandsAdvancedSettings &bollingerBandsAdvancedSettings) {
   const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
@@ -276,7 +207,7 @@ void TradingProcessor::visit(
       currentStrategy->getLastBuyCrossingPoint();
 }
 
-void TradingProcessor::visit(const model::RsiSettings &rsiSettings) {
+void TradingBuyingStrategyProcessor::visit(const model::RsiSettings &rsiSettings) {
   const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
 
@@ -315,7 +246,7 @@ void TradingProcessor::visit(const model::RsiSettings &rsiSettings) {
   strategyCrossingPoints_[&rsiSettings] = currentStrategy->getLastBuyCrossingPoint();
 }
 
-void TradingProcessor::visit(const model::EmaSettings &emaSettings) {
+void TradingBuyingStrategyProcessor::visit(const model::EmaSettings &emaSettings) {
   const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
 
@@ -352,7 +283,7 @@ void TradingProcessor::visit(const model::EmaSettings &emaSettings) {
   strategyCrossingPoints_[&emaSettings] = currentStrategy->getLastBuyCrossingPoint();
 }
 
-void TradingProcessor::visit(const model::SmaSettings &smaSettings) {
+void TradingBuyingStrategyProcessor::visit(const model::SmaSettings &smaSettings) {
   const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
 
@@ -388,7 +319,7 @@ void TradingProcessor::visit(const model::SmaSettings &smaSettings) {
   strategyCrossingPoints_[&smaSettings] = currentStrategy->getLastBuyCrossingPoint();
 }
 
-void TradingProcessor::visit(
+void TradingBuyingStrategyProcessor::visit(
     const model::MovingAveragesCrossingSettings &movingAveragesCrossingSettings) {
   const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
@@ -430,7 +361,7 @@ void TradingProcessor::visit(
       currentStrategy->getLastBuyCrossingPoint();
 }
 
-void TradingProcessor::visit(
+void TradingBuyingStrategyProcessor::visit(
     const model::StochasticOscillatorSettings &stochasticOscillatorSettings) {
   const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
@@ -479,7 +410,8 @@ void TradingProcessor::visit(
       currentStrategy->getLastBuyCrossingPoint();
 }
 
-void TradingProcessor::visit(const model::CustomStrategySettings &customStrategySettings) {
+void TradingBuyingStrategyProcessor::visit(
+    const model::CustomStrategySettings &customStrategySettings) {
   size_t strategiesCount = customStrategySettings.getStrategiesCount();
   for (int index = 0; index < strategiesCount; ++index) {
     if (!tradingManager_.isRunning()) {
@@ -489,7 +421,7 @@ void TradingProcessor::visit(const model::CustomStrategySettings &customStrategy
   }
 }
 
-common::MarketHistoryPtr TradingProcessor::getMarketHistory(
+common::MarketHistoryPtr TradingBuyingStrategyProcessor::getMarketHistory(
     common::TickInterval::Enum interval) const {
   auto &coinSettings = tradeConfiguration_.getCoinSettings();
   auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
@@ -500,44 +432,113 @@ common::MarketHistoryPtr TradingProcessor::getMarketHistory(
   return marketHistory;
 }
 
-bool TradingProcessor::isNeedToOpenBuyOrder() const {
-  if (!processingResult) return false;
+void TradingBuyingStrategyProcessor::updateCrossingPoint(
+    const model::StrategySettings &strategySettings, double lastCrossingPoint) {
+  // TODO: Revise this logic after release.
+  auto &settings = const_cast<model::StrategySettings &>(strategySettings);
+  settings.lastBuyCrossingPoint_ = lastCrossingPoint;
 
+  appListener_.saveStrategiesSettingsFiles();
+}
+
+common::MarketOrder TradingBuyingStrategyProcessor::openOrder(common::Currency::Enum fromCurrency,
+                                                              common::Currency::Enum toCurrency,
+                                                              double quantity, double price) {
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
-  const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   const auto &buySettings = tradeConfiguration_.getBuySettings();
+  const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   auto query = queryProcessor_.getQuery(stockExchangeSettings.stockExchangeType_);
-  auto currentTick = query->getCurrencyTick(coinSettings.baseCurrency_, currentTradedCurrency);
-  const std::string marketStr = common::Currency::toString(coinSettings.baseCurrency_) + "-" +
-                                common::Currency::toString(currentTradedCurrency);
+
   int openPositions = tradeOrdersHolder_.getBuyOpenPositionsForMarket(coinSettings.baseCurrency_,
                                                                       currentTradedCurrency);
+
+  auto baseAmountPerEachOrder = buySettings.getBaseCurrencyAmountPerEachOrder();
+  auto coinInTradingCount = tradeOrdersHolder_.getCoinInTradingCount();
+  double potentialCoinInTradingAmount = coinInTradingCount + quantity;
 
   if ((buySettings.openPositionAmountPerCoins_ <= openPositions)) {
     const std::string tradedCurrencyStr = common::Currency::toString(currentTradedCurrency);
     const std::string message = "The open positions for traded coin : " + tradedCurrencyStr +
                                 "has reached maximum. Buy order cannot be opened";
     messageSender_.sendMessage(message);
-    return false;
+    return common::MarketOrder();
   }
+
+  const std::string marketStr =
+      common::Currency::toString(fromCurrency) + "-" + common::Currency::toString(toCurrency);
 
   if (buySettings.maxOpenOrders_ <= tradeOrdersHolder_.getBuyOrdersCount()) {
     messageSender_.sendMessage(
         "The maximum coin orders has been reached. Buy order cannot be opened for market " +
         marketStr);
-    return false;
+    return common::MarketOrder();
   }
 
-  return true;
-}
+  if (potentialCoinInTradingAmount > buySettings.maxCoinAmount_) {
+    double potentialCoinInTradingWithMinOrderPrice =
+        coinInTradingCount + buySettings.minOrderPrice_;
+    if (potentialCoinInTradingWithMinOrderPrice > buySettings.maxCoinAmount_) {
+      messageSender_.sendMessage(
+          "The maximum coin amount in trading is reached. Buy order cannot be opened for market " +
+          marketStr);
+      return common::MarketOrder();
+    } else {
+      messageSender_.sendMessage(
+          "The total amount of orders exceeds \"Funded amount\" when establishing a new order. The "
+          "\"Min order price\" will be used for order forming for market " +
+          marketStr);
+      baseAmountPerEachOrder = buySettings.minOrderPrice_;
+    }
+  }
 
-void TradingProcessor::updateCrossingPoint(const model::StrategySettings &strategySettings,
-                                           double lastCrossingPoint) {
-  // TODO: Revise this logic after release.
-  auto &settings = const_cast<model::StrategySettings &>(strategySettings);
-  settings.lastBuyCrossingPoint_ = lastCrossingPoint;
+  auto balance = query->getBalance(coinSettings.baseCurrency_);
+  if (balance < baseAmountPerEachOrder) {
+    if (balance > buySettings.minOrderPrice_) {
+      messageSender_.sendMessage(
+          "The account balance is smaller than defined order price. The minimum order price will "
+          "be used for market " +
+          marketStr);
+      baseAmountPerEachOrder = buySettings.minOrderPrice_;
+    } else {
+      messageSender_.sendMessage("There is not enough money to open buy order for market " +
+                                 marketStr);
+      return common::MarketOrder();
+    }
+  }
 
-  appListener_.saveStrategiesSettingsFiles();
+  if (quantity <= 0) {
+    const std::string message = "Coins quantity is too small. Order cannot be opened.";
+    messageSender_.sendMessage(message);
+    return common::MarketOrder();
+  }
+
+  if (!lotsHolder_.empty()) {
+    std::string marketPair =
+        stock_exchange_utils::getMarketPair(stockExchangeSettings.stockExchangeType_,
+                                            coinSettings.baseCurrency_, currentTradedCurrency);
+
+    auto lotSize = lotsHolder_.getLot(marketPair);
+    if (quantity < lotSize.minQty_) {
+      const std::string message =
+          "Coins quantity is smaller that allowed minimum for current market. Buy order cannot be "
+          "opened.";
+      messageSender_.sendMessage(message);
+      return common::MarketOrder();
+    }
+    double reminder = fmod(quantity, lotSize.stepSize_);
+    if (reminder > 0) {
+      quantity = quantity - reminder;
+    }
+  }
+  auto currentOrder = query->buyOrder(fromCurrency, toCurrency, quantity, price);
+
+  const std::string message = "Opened buy order : " + currentOrder.toString();
+  messageSender_.sendMessage(message);
+  databaseProvider_.insertMarketOrder(currentOrder);
+  currentOrder.databaseId_ = databaseProvider_.getLastInsertRowId();
+  tradeOrdersHolder_.addBuyOrder(currentOrder);
+
+  return currentOrder;
 }
 
 }  // namespace trader

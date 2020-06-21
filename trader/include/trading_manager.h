@@ -104,12 +104,6 @@ class TradingManager : public QObject {
   bool isDataExists() const;
   void resetData();
 
-  void resetOrderProfit(model::OrdersProfit& orderProfit);
-
- private:
-  double calculateOrderQuantity(const common::MarketOrder& order, model::OrdersProfit& orderProfit);
-  double calculateLotSize(common::Currency::Enum tradedCurrency, double quantity) const;
-
  signals:
   void tradingStarted();
   void tradingStopped();

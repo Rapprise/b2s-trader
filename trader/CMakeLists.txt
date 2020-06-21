@@ -17,27 +17,29 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(UNIX)
-	add_definitions(-fPIC)
+    add_definitions(-fPIC)
 endif()
 
 
 set(INCLUDE_FILES
-        include/app_controller.h
-        include/app_stats_updater.h
-		include/app_chart_updater.h
-        include/trading_manager.h
-        include/trading_processor.h
-        include/trading_message_sender.h
-        include/trader.h)
+    include/app_controller.h
+    include/app_stats_updater.h
+    include/app_chart_updater.h
+    include/trading_manager.h
+    include/trading_buying_strategy_processor.h
+    include/trading_selling_strategy_processor.h
+    include/trading_message_sender.h
+    include/trader.h)
 
 set(SOURCE_FILES
-        src/trading_manager.cpp
-        src/trading_processor.cpp
-        src/app_controller.cpp
-        src/app_stats_updater.cpp
-		src/app_chart_updater.cpp
-        src/trader.cpp
-        src/trading_message_sender.cpp)
+    src/trading_manager.cpp
+    src/trading_buying_strategy_processor.cpp
+    src/trading_selling_strategy_processor.cpp
+    src/app_controller.cpp
+    src/app_stats_updater.cpp
+    src/app_chart_updater.cpp
+    src/trader.cpp
+    src/trading_message_sender.cpp)
 
 qt5_wrap_cpp(INCLUDE_GENERATED_FILES ${INCLUDE_FILES})
 
