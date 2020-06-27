@@ -82,6 +82,9 @@ TEST_F(TradeConfigSerializerUTFixture, SellSettings) {
   auto& sellSettings = configuration.takeSellSettings();
   sellSettings.profitPercentage_ = 3.4325199999999998;
   sellSettings.openOrderTime_ = 3112;
+  sellSettings.sellUsingProfit_ = true;
+  sellSettings.sellUsingStrategy_ = true;
+  sellSettings.openOrderWhenAnyIndicatorIsTriggered_ = true;
 
   std::ofstream stream("trade_config_settings.json");
   getTradeConfigSerializer().serialize(configuration, stream);
@@ -95,6 +98,10 @@ TEST_F(TradeConfigSerializerUTFixture, SellSettings) {
   const auto& restoredSellSettings = restoredConfiguration->getSellSettings();
   EXPECT_EQ(restoredSellSettings.openOrderTime_, 3112);
   EXPECT_EQ(restoredSellSettings.profitPercentage_, 3.4325199999999998);
+
+  EXPECT_TRUE(restoredSellSettings.sellUsingProfit_);
+  EXPECT_TRUE(restoredSellSettings.sellUsingStrategy_);
+  EXPECT_TRUE(restoredSellSettings.openOrderWhenAnyIndicatorIsTriggered_);
 }
 
 TEST_F(TradeConfigSerializerUTFixture, CoinSettings) {

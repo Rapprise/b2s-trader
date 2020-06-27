@@ -75,10 +75,10 @@ class TradingSellStrategyProcessor : private model::StrategySettingsVisitor {
   void runStopLossProcessor();
   void runTakeProfitProcessor();
 
+ private:
   common::MarketOrder openOrder(const common::MarketOrder& buyOrder, double quantity, double price,
                                 const std::string& message);
 
- private:
   void resetOrderProfit(model::OrdersProfit& orderProfit);
 
   double calculateOrderQuantity(const common::MarketOrder& order, model::OrdersProfit& orderProfit);

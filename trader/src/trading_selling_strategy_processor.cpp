@@ -109,6 +109,81 @@ void TradingSellStrategyProcessor::runStrategyProcessor() {
   }
 }
 
+void TradingSellStrategyProcessor::runTakeProfitProcessor() {
+  auto &coinSettings = tradeConfiguration_.getCoinSettings();
+  auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
+  auto &sellSettings = tradeConfiguration_.getSellSettings();
+  auto query = queryProcessor_.getQuery(stockExchangeSettings.stockExchangeType_);
+
+  for (int index = 0; index < coinSettings.tradedCurrencies_.size(); ++index) {
+    auto tradedCurrency = coinSettings.tradedCurrencies_.at(index);
+    if (!tradeOrdersHolder_.containOrdersProfit(tradedCurrency)) continue;
+
+    if (!tradingManager_.isRunning()) {
+      return;
+    }
+
+    currentTradedCurrency_ = tradedCurrency;
+
+    auto &ordersProfit = tradeOrdersHolder_.takeOrdersProfit(tradedCurrency);
+
+    std::set<common::MarketOrder> sellOrders;
+    ordersProfit.forEachOrder([&](const common::MarketOrder &order) { sellOrders.insert(order); });
+
+    for (const auto &order : sellOrders) {
+      double profitDelta = order.price_ * (sellSettings.profitPercentage_ / 100);
+      double boughtPrice = order.price_ + profitDelta;
+      auto currentTick = query->getCurrencyTick(order.fromCurrency_, order.toCurrency_);
+      if (currentTick.bid_ >= boughtPrice) {
+        double quantity = calculateOrderQuantity(order, ordersProfit);
+        if (quantity == 0) {
+          resetOrderProfit(ordersProfit);
+          return;
+        }
+
+        openOrder(order, quantity, currentTick.bid_, "TAKE PROFIT SIGNAL: Opened sell order");
+      }
+    }
+  }
+}
+
+void TradingSellStrategyProcessor::runStopLossProcessor() {
+  auto &coinSettings = tradeConfiguration_.getCoinSettings();
+  auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
+  auto query = queryProcessor_.getQuery(stockExchangeSettings.stockExchangeType_);
+
+  for (int index = 0; index < coinSettings.tradedCurrencies_.size(); ++index) {
+    auto tradedCurrency = coinSettings.tradedCurrencies_[index];
+    if (!tradeOrdersHolder_.containOrdersProfit(tradedCurrency)) continue;
+
+    if (!tradingManager_.isRunning()) {
+      return;
+    }
+    currentTradedCurrency_ = tradedCurrency;
+    auto &ordersProfit = tradeOrdersHolder_.takeOrdersProfit(tradedCurrency);
+
+    std::set<common::MarketOrder> stopLossOrders;
+    ordersProfit.forEachOrder(
+            [&](const common::MarketOrder &order) { stopLossOrders.insert(order); });
+
+    for (const auto &order : stopLossOrders) {
+      auto currentTick = query->getCurrencyTick(order.fromCurrency_, order.toCurrency_);
+      auto &stopLossAnnounces = features::stop_loss_announcer::StopLossAnnouncer::instance();
+      double stopLossPercentage = stopLossAnnounces.getValue() / 100;
+      double stopLossEdge = order.price_ * (1 - stopLossPercentage);
+      if (currentTick.ask_ <= stopLossEdge) {
+        double quantity = calculateOrderQuantity(order, ordersProfit);
+        if (quantity == 0) {
+          resetOrderProfit(ordersProfit);
+          return;
+        }
+
+        openOrder(order, quantity, currentTick.bid_, "STOP LOSS SIGNAL: Opened sell order");
+      }
+    }
+  }
+}
+
 void TradingSellStrategyProcessor::visit(const model::BollingerBandsSettings &bandsSettings) {
   const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
@@ -298,71 +373,6 @@ common::MarketHistoryPtr TradingSellStrategyProcessor::getMarketHistory(
   auto marketHistory =
       query->getMarketHistory(coinSettings.baseCurrency_, currentTradedCurrency_, interval);
   return marketHistory;
-}
-
-void TradingSellStrategyProcessor::runStopLossProcessor() {
-  auto &coinSettings = tradeConfiguration_.getCoinSettings();
-  auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
-  auto query = queryProcessor_.getQuery(stockExchangeSettings.stockExchangeType_);
-
-  for (int index = 0; index < coinSettings.tradedCurrencies_.size(); ++index) {
-    auto tradedCurrency = coinSettings.tradedCurrencies_[index];
-    if (!tradeOrdersHolder_.containOrdersProfit(tradedCurrency)) continue;
-
-    auto &ordersProfit = tradeOrdersHolder_.takeOrdersProfit(tradedCurrency);
-
-    std::set<common::MarketOrder> stopLossOrders;
-    ordersProfit.forEachOrder(
-        [&](const common::MarketOrder &order) { stopLossOrders.insert(order); });
-
-    for (const auto &order : stopLossOrders) {
-      auto currentTick = query->getCurrencyTick(order.fromCurrency_, order.toCurrency_);
-      auto &stopLossAnnounces = features::stop_loss_announcer::StopLossAnnouncer::instance();
-      double stopLossPercentage = stopLossAnnounces.getValue() / 100;
-      double stopLossEdge = order.price_ * (1 - stopLossPercentage);
-      if (currentTick.ask_ <= stopLossEdge) {
-        double quantity = calculateOrderQuantity(order, ordersProfit);
-        if (quantity == 0) {
-          resetOrderProfit(ordersProfit);
-          return;
-        }
-
-        openOrder(order, quantity, currentTick.bid_, "STOP LOSS SIGNAL: Opened sell order");
-      }
-    }
-  }
-}
-
-void TradingSellStrategyProcessor::runTakeProfitProcessor() {
-  auto &coinSettings = tradeConfiguration_.getCoinSettings();
-  auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
-  auto &sellSettings = tradeConfiguration_.getSellSettings();
-  auto query = queryProcessor_.getQuery(stockExchangeSettings.stockExchangeType_);
-
-  for (int index = 0; index < coinSettings.tradedCurrencies_.size(); ++index) {
-    auto tradedCurrency = coinSettings.tradedCurrencies_.at(index);
-    if (!tradeOrdersHolder_.containOrdersProfit(tradedCurrency)) continue;
-
-    auto &ordersProfit = tradeOrdersHolder_.takeOrdersProfit(tradedCurrency);
-
-    std::set<common::MarketOrder> sellOrders;
-    ordersProfit.forEachOrder([&](const common::MarketOrder &order) { sellOrders.insert(order); });
-
-    for (const auto &order : sellOrders) {
-      double profitDelta = order.price_ * (sellSettings.profitPercentage_ / 100);
-      double boughtPrice = order.price_ + profitDelta;
-      auto currentTick = query->getCurrencyTick(order.fromCurrency_, order.toCurrency_);
-      if (currentTick.bid_ >= boughtPrice) {
-        double quantity = calculateOrderQuantity(order, ordersProfit);
-        if (quantity == 0) {
-          resetOrderProfit(ordersProfit);
-          return;
-        }
-
-        openOrder(order, quantity, currentTick.bid_, "TAKE PROFIT SIGNAL: Opened sell order");
-      }
-    }
-  }
 }
 
 common::MarketOrder TradingSellStrategyProcessor::openOrder(const common::MarketOrder &order,

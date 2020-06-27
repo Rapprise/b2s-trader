@@ -36,7 +36,7 @@ struct SellSettings {
 
   std::string strategyName_;
 
-  bool sellUsingProfit_{false};
+  bool sellUsingProfit_{true};
   bool sellUsingStrategy_{false};
 
   bool openOrderWhenAnyIndicatorIsTriggered_{false};

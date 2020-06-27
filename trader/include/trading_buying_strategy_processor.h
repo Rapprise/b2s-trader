@@ -73,9 +73,6 @@ class TradingBuyingStrategyProcessor : private model::StrategySettingsVisitor {
 
   void run();
 
-  common::MarketOrder openOrder(common::Currency::Enum fromCurrency,
-                                common::Currency::Enum toCurrency, double quantity, double price);
-
  private:
   void visit(const model::BollingerBandsSettings &bandsSettings) final;
   void visit(const model::BollingerBandsAdvancedSettings &bandsAdvancedSettings) final;
@@ -87,6 +84,9 @@ class TradingBuyingStrategyProcessor : private model::StrategySettingsVisitor {
   void visit(const model::CustomStrategySettings &customStrategySettings) final;
 
  private:
+  common::MarketOrder openOrder(common::Currency::Enum fromCurrency,
+                                common::Currency::Enum toCurrency);
+
   void updateCrossingPoint(const model::StrategySettings &strategySettings,
                            double lastCrossingPoint);
   common::MarketHistoryPtr getMarketHistory(common::TickInterval::Enum interval) const;

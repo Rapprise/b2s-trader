@@ -26,7 +26,6 @@
 
 #include "include/trading_buying_strategy_processor.h"
 
-#include "features/include/telegram_announcer.h"
 #include "model/include/settings/strategies_settings/bollinger_bands_advanced_settings.h"
 #include "model/include/settings/strategies_settings/bollinger_bands_settings.h"
 #include "model/include/settings/strategies_settings/custom_strategy_settings.h"
@@ -90,12 +89,7 @@ void TradingBuyingStrategyProcessor::run() {
 
       if (!processingResult) continue;
 
-      auto currentTick = query->getCurrencyTick(coinSettings.baseCurrency_, currentTradedCurrency);
-
-      auto baseAmountPerEachOrder = buySettings.getBaseCurrencyAmountPerEachOrder();
-      double quantity = baseAmountPerEachOrder / currentTick.ask_;
-
-      openOrder(coinSettings.baseCurrency_, currentTradedCurrency, quantity, currentTick.ask_);
+      openOrder(coinSettings.baseCurrency_, currentTradedCurrency);
 
       for (auto strategyMarket : strategyMarkets_) {
         if (tradeSignaledStrategyMarketHolder_.containMarket(
@@ -442,8 +436,7 @@ void TradingBuyingStrategyProcessor::updateCrossingPoint(
 }
 
 common::MarketOrder TradingBuyingStrategyProcessor::openOrder(common::Currency::Enum fromCurrency,
-                                                              common::Currency::Enum toCurrency,
-                                                              double quantity, double price) {
+                                                              common::Currency::Enum toCurrency) {
   const auto &coinSettings = tradeConfiguration_.getCoinSettings();
   const auto &buySettings = tradeConfiguration_.getBuySettings();
   const auto &stockExchangeSettings = tradeConfiguration_.getStockExchangeSettings();
@@ -452,7 +445,12 @@ common::MarketOrder TradingBuyingStrategyProcessor::openOrder(common::Currency::
   int openPositions = tradeOrdersHolder_.getBuyOpenPositionsForMarket(coinSettings.baseCurrency_,
                                                                       currentTradedCurrency);
 
+  auto currentTick = query->getCurrencyTick(coinSettings.baseCurrency_, currentTradedCurrency);
+  double price = currentTick.ask_;
+
   auto baseAmountPerEachOrder = buySettings.getBaseCurrencyAmountPerEachOrder();
+  double quantity = baseAmountPerEachOrder / currentTick.ask_;
+
   auto coinInTradingCount = tradeOrdersHolder_.getCoinInTradingCount();
   double potentialCoinInTradingAmount = coinInTradingCount + quantity;
 
@@ -499,6 +497,7 @@ common::MarketOrder TradingBuyingStrategyProcessor::openOrder(common::Currency::
           "be used for market " +
           marketStr);
       baseAmountPerEachOrder = buySettings.minOrderPrice_;
+      quantity = baseAmountPerEachOrder / currentTick.ask_;
     } else {
       messageSender_.sendMessage("There is not enough money to open buy order for market " +
                                  marketStr);
